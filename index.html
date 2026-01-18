@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="screen-orientation" content="landscape">
+<meta name="x5-orientation" content="landscape">
+<link rel="manifest" href="manifest.json">
+<title>Volleyball Scoreboard</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  color: #fff;
+  font-family: system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  touch-action: manipulation;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Top Bar ===== */
+.topbar {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  background: linear-gradient(#111, #000);
+  flex-shrink: 0;
+  overflow-x: auto;
+  z-index: 10;
+}
+.topbar::-webkit-scrollbar { display: none; }
+
+.sets { display: flex; flex-shrink: 0; }
+
+.sets button,
+.actions button {
+  margin-right: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: none;
+  background: #334155;
+  color: #fff;
+  white-space: nowrap;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.sets .active {
+  background: #facc15;
+  color: #000;
+  font-weight: bold;
+}
+
+.actions {
+  margin-left: auto;
+  display: flex;
+  flex-shrink: 0;
+}
+
+/* ===== Court ===== */
+.court {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+.team {
+  flex: 1;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.5s ease; /* 增加颜色切换时的过渡动画，更顺滑 */
+}
+
+/* 蓝色背景 (Team A) */
+.team.A { background: linear-gradient(#14b8ff, #0b4a8b); }
+
+/* 红色背景 (Team B) */
+.team.B { background: linear-gradient(#ef4444, #6b0f0f); }
+
+/* Tap zone */
+.tap-zone {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: pointer;
+}
+
+/* Content */
+.content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  pointer-events: none; 
+}
+
+.team-name {
+  font-size: 36px;
+  letter-spacing: 1px;
+  margin-bottom: 0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  pointer-events: auto;
+  z-index: 5;
+}
+
+/* Score Row */
+.score-row {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  height: auto; 
+  pointer-events: none;
+  margin-top: -10px;
+}
+
+/* 分数 */
+.score {
+  font-size: 300px; 
+  line-height: 0.75; 
+  font-weight: 900;
+  cursor: pointer;
+  margin: 0 10px;
+  text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  pointer-events: auto;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  flex-direction: column;
+  width: 55px;
+  justify-content: space-between;
+  pointer-events: auto;
+}
+
+.serve-container {
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 32px;
+  margin-bottom: 4px;
+}
+
+.controls button {
+  width: 100%;
+  flex: 1;
+  font-size: 32px;
+  border-radius: 8px;
+  border: none;
+  margin: 4px 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+
+.plus { background: #22c55e; color: white; }
+.minus { background: #fb7185; color: white; }
+
+/* 竖屏遮罩 */
+#orientation-lock {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #000;
+  z-index: 9999;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+#orientation-lock svg {
+  width: 64px; height: 64px; fill: #fff;
+  animation: rotate-phone 2s infinite ease-in-out;
+}
+#orientation-lock p { margin-top: 20px; font-size: 18px; color: #fff; }
+@media screen and (orientation: portrait) {
+  #orientation-lock { display: flex; }
+  .topbar, .court { display: none !important; }
+}
+</style>
+</head>
+
+<body>
+
+<div id="orientation-lock">
+  <svg viewBox="0 0 24 24">
+    <path d="M17 1H7c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm0 18H7V5h10v14z"/>
+  </svg>
+  <p>Please Rotate Device</p>
+</div>
+
+<div class="topbar">
+  <div class="sets">
+    <button class="active" data-set="0">Set 1</button>
+    <button data-set="1">Set 2</button>
+    <button data-set="2">Set 3</button>
+    <button data-set="3">Set 4</button>
+    <button data-set="4">Set 5</button>
+  </div>
+  <div class="actions">
+    <button id="fullscreenBtn">⛶ Full</button>
+    <button id="editNamesBtn">Names</button>
+    <button id="serveBtn">Serve</button>
+    <button id="swapBtn">Swap</button>
+    <button id="resetBtn">Reset</button>
+  </div>
+</div>
+
+<div class="court">
+  <div class="team A" id="sideLeft">
+    <div class="tap-zone" id="tapA"></div>
+    <div class="content">
+      <div class="team-name" id="nameA">OTHER</div>
+      <div class="score-row">
+        <div class="controls">
+          <div class="serve-container" id="serveA"></div>
+          <button class="plus" id="Aplus">+</button>
+          <button class="minus" id="Aminus">−</button>
+        </div>
+        <div class="score" id="scoreA">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="team B" id="sideRight">
+    <div class="tap-zone" id="tapB"></div>
+    <div class="content">
+      <div class="team-name" id="nameB">EVA</div>
+      <div class="score-row">
+        <div class="score" id="scoreB">0</div>
+        <div class="controls">
+          <div class="serve-container" id="serveB">🏐</div>
+          <button class="plus" id="Bplus">+</button>
+          <button class="minus" id="Bminus">−</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  /* 1. 获取 DOM 元素 */
+  const els = {
+    // 布局容器 (新增)
+    sideLeft: document.getElementById('sideLeft'),
+    sideRight: document.getElementById('sideRight'),
+    
+    scoreA: document.getElementById('scoreA'),
+    scoreB: document.getElementById('scoreB'),
+    serveA: document.getElementById('serveA'),
+    serveB: document.getElementById('serveB'),
+    nameA: document.getElementById('nameA'),
+    nameB: document.getElementById('nameB'),
+    tapA: document.getElementById('tapA'),
+    tapB: document.getElementById('tapB'),
+    Aplus: document.getElementById('Aplus'),
+    Bplus: document.getElementById('Bplus'),
+    Aminus: document.getElementById('Aminus'),
+    Bminus: document.getElementById('Bminus'),
+    serveBtn: document.getElementById('serveBtn'),
+    resetBtn: document.getElementById('resetBtn'),
+    editNamesBtn: document.getElementById('editNamesBtn'),
+    swapBtn: document.getElementById('swapBtn'),
+    fullscreenBtn: document.getElementById('fullscreenBtn'),
+    setBtns: document.querySelectorAll('.sets button')
+  };
+
+  /* 2. 数据初始化 */
+  const scores = [
+    {A:0,B:0}, {A:0,B:0}, {A:0,B:0}, {A:0,B:0}, {A:0,B:0}
+  ];
+  let currentSet = 0;
+  let serve = "B";
+
+  /* 3. 视口锁定 */
+  function lockViewport() {
+    document.body.style.height = window.innerHeight + "px";
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener("resize", lockViewport);
+  window.addEventListener("orientationchange", lockViewport);
+  lockViewport();
+
+  /* 4. 更新界面 */
+  function update() {
+    els.scoreA.textContent = scores[currentSet].A;
+    els.scoreB.textContent = scores[currentSet].B;
+    els.serveA.textContent = serve === "A" ? "🏐" : "";
+    els.serveB.textContent = serve === "B" ? "🏐" : "";
+    updateSetButtons();
+  }
+
+  function updateSetButtons() {
+    els.setBtns.forEach(btn => {
+      const i = Number(btn.dataset.set);
+      const a = scores[i].A;
+      const b = scores[i].B;
+      let leader = "—";
+      if (a > b) leader = els.nameA.textContent;
+      else if (b > a) leader = els.nameB.textContent;
+      btn.textContent = `S${i + 1} · ${leader}`;
+    });
+  }
+
+  /* 5. 核心逻辑 */
+  function add(team) {
+    scores[currentSet][team]++;
+    serve = team;
+    update();
+  }
+
+  /* 6. 事件绑定 */
+  els.tapA.onclick = () => add("A");
+  els.tapB.onclick = () => add("B");
+  els.scoreA.onclick = () => add("A");
+  els.scoreB.onclick = () => add("B");
+
+  els.Aplus.onclick = (e) => { e.stopPropagation(); add("A"); };
+  els.Bplus.onclick = (e) => { e.stopPropagation(); add("B"); };
+
+  els.Aminus.onclick = (e) => {
+    e.stopPropagation();
+    if (scores[currentSet].A > 0) {
+      scores[currentSet].A--;
+      serve = "B";
+    }
+    update();
+  };
+
+  els.Bminus.onclick = (e) => {
+    e.stopPropagation();
+    if (scores[currentSet].B > 0) {
+      scores[currentSet].B--;
+      serve = "A";
+    }
+    update();
+  };
+
+  els.serveBtn.onclick = () => {
+    serve = serve === "A" ? "B" : "A";
+    update();
+  };
+
+  els.resetBtn.onclick = () => {
+    if(confirm("Reset all scores?")) {
+      scores.forEach(s => { s.A = 0; s.B = 0; });
+      serve = "B";
+      update();
+    }
+  };
+
+  els.editNamesBtn.onclick = () => {
+    const a = prompt("Blue Team Name:", els.nameA.textContent);
+    if (a && a.trim()) els.nameA.textContent = a;
+    const b = prompt("Red Team Name:", els.nameB.textContent);
+    if (b && b.trim()) els.nameB.textContent = b;
+    update();
+  };
+
+  // ===== 修改后的 Swap 逻辑 =====
+  els.swapBtn.onclick = () => {
+    // 1. 交换名字
+    const tempName = els.nameA.textContent;
+    els.nameA.textContent = els.nameB.textContent;
+    els.nameB.textContent = tempName;
+
+    // 2. 交换比分数据
+    scores.forEach(s => { [s.A, s.B] = [s.B, s.A]; });
+
+    // 3. 交换发球权
+    serve = serve === "A" ? "B" : "A";
+    
+    // 4. 【新增】交换背景颜色 (通过切换 A/B 类名)
+    // 利用 classList.toggle 自动切换类名
+    els.sideLeft.classList.toggle('A');
+    els.sideLeft.classList.toggle('B');
+    
+    els.sideRight.classList.toggle('A');
+    els.sideRight.classList.toggle('B');
+
+    update();
+  };
+
+  els.setBtns.forEach(btn => {
+    btn.onclick = () => {
+      els.setBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentSet = Number(btn.dataset.set);
+      update();
+    };
+  });
+
+  els.fullscreenBtn.onclick = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock("landscape").catch(console.warn);
+        }
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    } catch (err) { console.log(err); }
+  };
+
+  document.addEventListener('fullscreenchange', () => {
+    if (document.fullscreenElement) {
+      els.fullscreenBtn.textContent = "❌ Exit";
+      els.fullscreenBtn.style.background = "#b91c1c";
+    } else {
+      els.fullscreenBtn.textContent = "⛶ Full";
+      els.fullscreenBtn.style.background = "#334155";
+    }
+  });
+
+  /* 7. 启动 */
+  update();
+});
+</script>
+</body>
+</html>
