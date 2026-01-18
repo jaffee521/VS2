@@ -87,7 +87,7 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: background 0.5s ease; /* 增加颜色切换时的过渡动画，更顺滑 */
+  transition: background 0.5s ease; 
 }
 
 /* 蓝色背景 (Team A) */
@@ -136,7 +136,7 @@ html, body {
   margin-top: -10px;
 }
 
-/* 分数 */
+/* 分数 - 修改区域 */
 .score {
   font-size: 300px; 
   line-height: 0.75; 
@@ -145,6 +145,10 @@ html, body {
   margin: 0 10px;
   text-shadow: 0 4px 8px rgba(0,0,0,0.3);
   pointer-events: auto;
+  
+  /* 【关键修改】使用 scaleX 压缩宽度到 90%，保持高度不变 */
+  transform: scaleX(0.9);
+  transform-origin: center; /* 保持居中缩放 */
 }
 
 /* Controls */
@@ -234,7 +238,7 @@ html, body {
   <div class="team A" id="sideLeft">
     <div class="tap-zone" id="tapA"></div>
     <div class="content">
-      <div class="team-name" id="nameA">OTHER</div>
+      <div class="team-name" id="nameA">B TEAM</div>
       <div class="score-row">
         <div class="controls">
           <div class="serve-container" id="serveA"></div>
@@ -264,12 +268,9 @@ html, body {
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  /* 1. 获取 DOM 元素 */
   const els = {
-    // 布局容器 (新增)
     sideLeft: document.getElementById('sideLeft'),
     sideRight: document.getElementById('sideRight'),
-    
     scoreA: document.getElementById('scoreA'),
     scoreB: document.getElementById('scoreB'),
     serveA: document.getElementById('serveA'),
@@ -290,14 +291,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setBtns: document.querySelectorAll('.sets button')
   };
 
-  /* 2. 数据初始化 */
   const scores = [
     {A:0,B:0}, {A:0,B:0}, {A:0,B:0}, {A:0,B:0}, {A:0,B:0}
   ];
   let currentSet = 0;
   let serve = "B";
 
-  /* 3. 视口锁定 */
   function lockViewport() {
     document.body.style.height = window.innerHeight + "px";
     window.scrollTo(0, 0);
@@ -306,7 +305,6 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener("orientationchange", lockViewport);
   lockViewport();
 
-  /* 4. 更新界面 */
   function update() {
     els.scoreA.textContent = scores[currentSet].A;
     els.scoreB.textContent = scores[currentSet].B;
@@ -327,14 +325,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* 5. 核心逻辑 */
   function add(team) {
     scores[currentSet][team]++;
     serve = team;
     update();
   }
 
-  /* 6. 事件绑定 */
   els.tapA.onclick = () => add("A");
   els.tapB.onclick = () => add("B");
   els.scoreA.onclick = () => add("A");
@@ -382,24 +378,17 @@ document.addEventListener('DOMContentLoaded', () => {
     update();
   };
 
-  // ===== 修改后的 Swap 逻辑 =====
   els.swapBtn.onclick = () => {
-    // 1. 交换名字
     const tempName = els.nameA.textContent;
     els.nameA.textContent = els.nameB.textContent;
     els.nameB.textContent = tempName;
 
-    // 2. 交换比分数据
     scores.forEach(s => { [s.A, s.B] = [s.B, s.A]; });
-
-    // 3. 交换发球权
     serve = serve === "A" ? "B" : "A";
     
-    // 4. 【新增】交换背景颜色 (通过切换 A/B 类名)
-    // 利用 classList.toggle 自动切换类名
+    // 交换背景颜色
     els.sideLeft.classList.toggle('A');
     els.sideLeft.classList.toggle('B');
-    
     els.sideRight.classList.toggle('A');
     els.sideRight.classList.toggle('B');
 
@@ -438,7 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* 7. 启动 */
   update();
 });
 </script>
